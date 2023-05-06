@@ -1,0 +1,181 @@
+
+Install though the Argocd/Helm and Manifest files:
+
+
+root@node3:~# helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+"ingress-nginx" has been added to your repositories
+root@node3:~# helm repo update
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "ingress-nginx" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+# helm show values ingress-nginx/ingress-nginx > ingress-nginx.yaml
+
+Nano  ingress-nginx.yaml
+  hostNetwork: true
+  ## Use host ports 80 and 443
+  ## Disabled by default
+  hostPort:
+    # -- Enable 'hostPort' or not
+    enabled: true
+    ports:
+      # -- 'hostPort' http port
+      http: 80
+      # -- 'hostPort' https port
+      https: 443
+  # -- Election ID to use for status update, by default it uses the controller name combined with a suffix of 'leader'
+
+
+ # -- Use a `DaemonSet` or `Deployment` ==> change to DaemonSet
+  kind: DaemonSet  
+=================
+
+root@node1:~/ingress# helm install myingress ingress-nginx/ingress-nginx -n ingress-nginx --values ingress-nginx.yaml
+NAME: myingress
+LAST DEPLOYED: Sun Apr 23 10:51:07 2023
+NAMESPACE: ingress-nginx
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+The ingress-nginx controller has been installed.
+It may take a few minutes for the LoadBalancer IP to be available.
+You can watch the status by running 'kubectl --namespace ingress-nginx get services -o wide -w myingress-ingress-nginx-controller'
+
+An example Ingress that makes use of the controller:
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: example
+    namespace: foo
+  spec:
+    ingressClassName: nginx
+    rules:
+      - host: www.example.com
+        http:
+          paths:
+            - pathType: Prefix
+              backend:
+                service:
+                  name: exampleService
+                  port:
+                    number: 80
+              path: /
+    # This section is only required if TLS is to be enabled for the Ingress
+    tls:
+      - hosts:
+        - www.example.com
+        secretName: example-tls
+
+If TLS is enabled for the Ingress, a Secret containing the certificate and key must also be provided:
+
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: example-tls
+    namespace: foo
+  data:
+    tls.crt: <base64 encoded cert>
+    tls.key: <base64 encoded key>
+  type: kubernetes.io/tls
+root@node1:~/ingress# helm list -n ingress-nginx
+NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
+myingress       ingress-nginx   1               2023-04-23 10:51:07.764285997 +0530 IST deployed        ingress-nginx-4.6.0     1.7.0
+root@node1:~/ingress#
+root@node1:~/ingress#
+root@node1:~/ingress#
+
+root@node1:~/ingress#
+root@node1:~/ingress# k get all
+NAME                                           READY   STATUS    RESTARTS   AGE
+pod/myingress-ingress-nginx-controller-4j98m   1/1     Running   0          3m42s
+pod/myingress-ingress-nginx-controller-r2wv4   1/1     Running   0          3m42s   
+NAME                                                   TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
+service/myingress-ingress-nginx-controller             LoadBalancer   10.107.20.190   172.26.78.201   80:32552/TCP,443:30568/TCP   3m42s
+service/myingress-ingress-nginx-controller-admission   ClusterIP      10.100.156.68   <none>          443/TCP                      3m42s
+
+NAME                                                DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+daemonset.apps/myingress-ingress-nginx-controller   2         2         2       2            2           kubernetes.io/os=linux   3m42s
+root@node1:~/ingress#
+
+172.26.78.201 MetalLB IP Adress
+
+=====================
+
+
+
+
+
+########## Through Manifest files:  ########
+
+cd ingress-nginx-controller/ingress-demo/
+
+root@node1:~/kubernetes/yamls/ingress-demo# k create -f nginx-deploy-main.yaml
+deployment.apps/nginx-deploy-main created
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo# k expose deployment nginx-deploy-main --port 80
+service/nginx-deploy-main exposed
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo# k get all
+NAME                                           READY   STATUS    RESTARTS   AGE
+pod/myingress-ingress-nginx-controller-4j98m   1/1     Running   0          43m
+pod/myingress-ingress-nginx-controller-r2wv4   1/1     Running   0          43m
+pod/nginx-deploy-main-5844dccccb-t6lvp         1/1     Running   0          65s
+
+NAME                                                   TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
+service/myingress-ingress-nginx-controller             LoadBalancer   10.107.20.190   172.26.78.201   80:32552/TCP,443:30568/TCP   43m
+service/myingress-ingress-nginx-controller-admission   ClusterIP      10.100.156.68   <none>          443/TCP                      43m
+service/nginx-deploy-main                              ClusterIP      10.102.147.49   <none>          80/TCP                       33s
+
+NAME                                                DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+daemonset.apps/myingress-ingress-nginx-controller   2         2         2       2            2           kubernetes.io/os=linux   43m
+
+NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx-deploy-main   1/1     1            1           65s
+
+NAME                                           DESIRED   CURRENT   READY   AGE
+replicaset.apps/nginx-deploy-main-5844dccccb   1         1         1       65s
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo#
+
+Still nginx deployment port is not exposed directly, we wanted to expose through the nginx-ingress resource
+
+root@node1:~/kubernetes/yamls/ingress-demo# k apply -f ingress-resource-1.yaml
+ingress.networking.k8s.io/ingress-resource-1 created
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo# k get ing
+NAME                 CLASS   HOSTS               ADDRESS   PORTS   AGE
+ingress-resource-1   nginx   nginx.example.com             80      6s
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernete
+root@node1:~/kubernetes/yamls/ingress-demo# k describe ing ingress-resource-1
+Name:             ingress-resource-1
+Namespace:        ingress-nginx
+Address:
+Default backend:  default-http-backend:80 (<error: endpoints "default-http-backend" not found>)
+Rules:
+  Host               Path  Backends
+  ----               ----  --------
+  nginx.example.com
+                     /   nginx-deploy-main:80 (192.168.166.172:80)
+Annotations:         <none>
+Events:
+  Type    Reason  Age   From                      Message
+  ----    ------  ----  ----                      -------
+  Normal  Sync    51s   nginx-ingress-controller  Scheduled for sync
+  Normal  Sync    51s   nginx-ingress-controller  Scheduled for sync
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo#
+s/yamls/ingress-demo#
+root@node1:~/kubernetes/yamls/ingress-demo# curl 192.168.166.172:80
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+
+Now its exposed throgh the ingress
