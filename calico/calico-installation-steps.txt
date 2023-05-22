@@ -1,0 +1,23 @@
+root@node1:~# sudo kubeadm init --control-plane-endpoint=172.26.78.27 --upload-certs --pod-network-cidr=192.168.0.0/16
+
+
+root@node1:~# kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/tigera-operator.yaml
+
+root@node1:~# kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/custom-resources.yaml
+
+
+
+root@node1:~/calico# k get tigerastatus
+NAME        AVAILABLE   PROGRESSING   DEGRADED   SINCE
+apiserver   True        False         False      80s
+calico      True        False         False      95s
+root@node1:~/calico#
+
+Every 2.0s: kubectl get pods -n calico-system                                                                                                                             
+NAME                                      READY   STATUS    RESTARTS   AGE
+calico-kube-controllers-fccf466c5-jdqtk   1/1     Running   0          2m38s
+calico-node-2vx8q                         1/1     Running   0          2m38s
+calico-typha-7987d6fff8-kdcb7             1/1     Running   0          2m39s
+csi-node-driver-47t2f                     2/2     Running   0          2m38s
+
+https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart

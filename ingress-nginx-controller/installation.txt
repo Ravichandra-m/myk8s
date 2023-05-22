@@ -2,6 +2,8 @@
 Install though the Argocd/Helm and Manifest files:
 
 
+https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx   ==> Open this page
+
 root@node3:~# helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 "ingress-nginx" has been added to your repositories
 root@node3:~# helm repo update
